@@ -1,12 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
-#!/usr/bin/env python
-# coding: utf-8
-
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -40,26 +34,46 @@ import cv2
 import requests
 import re
 
+import sys
+
 
 HomeUrl = "https://front.homeplus.co.kr/"
 GooUrl = "https://www.google.co.kr/"
-api_url = "api_url" #수정하기
-secret_key = "secret_key" #수정하기
-dir_path = "dir_path" #수정하기
-path_folder = "path" #수정하기
-filename ='voiceFile'#수정하기
+api_url = "api_url" #수정하기 Naver Clovar
+secret_key = "secret_key" #수정하기 Naver Clovar
+dir_path = "dir_path" #수정하기 이미지 저장할 경로
+path_folder = "path" #수정하기 (=dir_path)
+filename ='voiceFile'#수정하기 (보이스 파일 저장할 경로)
 
 # get_key()
 # start_db(), close_db()
-# get_allergy(상품명) : 알러지 정보, 상품 정보(이름, 가격, 링크) 리턴 
+# get_product(상품명) : 알러지 정보, 상품 정보(이름, 가격, 링크) 리턴 
 
 # 반환 안내 STT txt 만들기
 # + 중간에 멈출 수 있도록 하는 변수 필요
 
+#################################################################################################################################
+# main
+def main(argv):
+    opt = int(argv[1])
+    
+    #opt로 db connect 관리, product 상품 정보 txt로 호출, speak() 실행,  
+    
+    if (opt<-1): #db connect 시작 (맨처음 1번 호출)
+        start_db()
+    else if (opt==0):
+        close_db()
+    else if (opt==1): #db connect 닫기 (맨마지막 1번 호출)
+        return (get_product(key))
+    else if (opt>1):
+        speak(argv[2])
+
+if __name__ == "__main__": #argv[1]: opt , #argv[2]: 상품명
+    main(sys.argv)
+
 
 ###############################################################################################################################
 # STT: 음성 검색 안내 및 음성 검색어 추출
-# keyboard 입력 기능과 합치기
 # 음성 버튼 클릭 시 get_key() 실행
 
 def speak(text):
@@ -87,7 +101,7 @@ def get_key ():
 ###############################################################################################################################
 # DB에 상품 정보 저장
 # DB start, close : 실행 코드 맨 첫 부분, 끝 부분(사용자가 창 닫을 때)에 추가하기
-# save_products_to_db: get_allergy(key) 함수 내부에서 사용
+# save_products_to_db: get_product(key) 함수 내부에서 사용
 # Tips!!: tab 들여쓰기 단축키, shift+tab 내어쓰기 단축키
 
 def start_db():
@@ -138,14 +152,14 @@ def save_products_to_db(key):
     return ranks, name, price, link
 
 ###############################################################################################################################
-# get_allergy (검색어): 검색어로 크롤링 후 DB에 상품정보 저장 및 OCR을 통한 알러지 정보 리스트 리턴함
+# get_product (검색어): 검색어로 크롤링 후 DB에 상품정보 저장 및 OCR을 통해 알러지 정보를 포함한 상품 정보 리스트 리턴함
 
 # 실행코드 : 알러지 정보 가져올 때 실행
-def get_allergy (key):
+def get_product (key):
     name_list, price_list,link_list = save_products_to_db(key) # 입력받은 검색어로 크롤링해 상품정보를 DB에 저장함
     links=get_img(link_list) # 링크에 접속해 영양 정보 이미지를 가져옴
-    is_empty_file(dir_path) # 빈 파일 체크
-    get_preimg(name_list,links) # 
+    is_empty_file(dir_path) # 빈 디렉토리 체크 (빈 디렉토리로 만듦)
+    get_preimg(name_list,links) # 접속한 링크에서 받은 이미지를 디렉토리에 듐 
     img_path=get_dirimgs(name_list,dir_path) #
     re=naver_clova(img_path) # 클로바 OCR 실행
     stts_allergy=find_allergy(name_list,re) # 알러지 정보 추출
@@ -419,5 +433,3 @@ def find_allergy(name_list,re):
         stts.append(stt)
         ite+=1
     return stts
-
-
