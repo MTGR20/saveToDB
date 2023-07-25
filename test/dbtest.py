@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[9]:
+# In[12]:
 
 
 #!/usr/bin/env python
@@ -56,6 +56,21 @@ def speak(text):
     playsound.playsound(filename) # 해당 음성파일을 실행(즉, 음성을 말함)
     os.remove(filename) # <---- 이부분이 없으면 퍼미션 에러 발생(아마도 파일을 연 상태에서 추가적인 파일생성 부분에서 에러가 발생하는 것으로 보임)
 
+def get_key():
+    # 안내 방송(음성)
+    speak("안녕하세요. 검색하실 상품을 말씀해주세요.")
+    
+    # 사용자 음성 듣기
+    r = sr.Recognizer()
+    mic = sr.Microphone(device_index = 1)
+    
+    with mic as source:
+        audio = r.listen(source, timeout = 3)
+
+    query_txt = r.recognize_google(audio, language="ko-KR")
+    #print(query_txt)
+    return (query_txt)    
+    
 def replace_string(all):
     specialchars="{}[](),/:을"
     
@@ -218,20 +233,9 @@ def naver_clova(src_link):
 
 # 사용자 음성 검색
 def start():
-    
-    
-#     # 안내 방송(음성)
-#     speak("안녕하세요. 검색하실 상품을 말씀해주세요.")
-    
-#     # 사용자 음성 듣기
-#     r = sr.Recognizer()
-#     mic = sr.Microphone(device_index = 1)
-    
-#     with mic as source:
-#         audio = r.listen(source, timeout = 3)
 
-#     query_txt = r.recognize_google(audio, language="ko-KR")
-#     print(query_txt)
+    #query_txt = get_key()
+    #print(query_txt)
 
 ###############################################################################################################################
 # DB에 상품 정보 저장
