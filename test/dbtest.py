@@ -149,9 +149,9 @@ def remove_fac(pre_re,food_index,fac_num):
         new_food_index.append(food_index[food_index.index(fac_num):])
     return new_food_index
     
-def stt_string(name,pre_re,allergy):
+def stt_string(pre_re,allergy):
     stt=""
-    print(f"<{name}>의 알러지유발성분 입니다.")
+    #print(f"<{name}>의 알러지유발성분 입니다.")
     set_allergy=[]
     for a in allergy:
         for i in a:
@@ -160,31 +160,29 @@ def stt_string(name,pre_re,allergy):
     for a in result:
         stt+=a
         stt+=" "
-        print(a,end=' ')
-    print("입니다.")
+        #print(a,end=' ')
+    #print("입니다.")
     return stt
 
-def find_allergy(name_list,re):
+def find_allergy(re):
     keyword= ['메밀','밀','대두','복숭아','토마토'            ,'우유','치즈','굴','가리비','전복','홍합','땅콩','계란','달걀'            ,'고등어','멸치','명태','가자미','명태','장어','대구','참치','연어'            ,'랍스터','오징어','게','새우','양고기','소고기','돼지고기','아황산포함식품'            ,'번데기','닭고기','쇠고기','오징어','잣','오이','토마토','당근'            ,'셀러리','감자','마늘','양파','딸기','키위','망고','바나나','감귤'            ,'사과','복숭아','밤','보리','옥수수','쌀','밀가루','참깨','땅콩','콩'            ,'헤이즐럿','호두','카카오','아모든','해바라기씨','CCD항원','효모'            ,'올리브','아카시아','쑥'
            '난류','알류','견과류','육류','갑각류','조개류','아황산류']
     ite=0
     stts=[]
     for i in re:
-        print(f"--------------{name_list[ite]}-----------------")
+        #print(f"--------------{name_list[ite]}-----------------")
         pre_re=string_pre(i)
         food_index=find_index(pre_re,keyword)
         fac_index=find_fac(pre_re)
         fac_num=find_facnum(fac_index)
         allergy=remove_fac(pre_re,food_index,fac_num)
-        stt=stt_string(name_list[ite],pre_re,allergy)
+        stt=stt_string(pre_re,allergy)
         stts.append(stt)
         ite+=1
     return stts
 
 def naver_clova(src_link):
     re=[]
-    
-    print(src_link)
 
     path = "./tmp.png"
     urllib.request.urlretrieve(src_link, path)
@@ -270,7 +268,7 @@ def start():
 
     prods = driver.find_elements(By.CLASS_NAME, 'unitItemBox')
 
-    name_list=[]
+    #name_list=[]
     ranks = 1
     for prod in prods :
         name = prod.find_element(By.CLASS_NAME, "css-12cdo53-defaultStyle-Typography-ellips").text
@@ -278,24 +276,36 @@ def start():
         link = prod.find_element(By.CLASS_NAME, "productTitle").get_attribute('href')
 #         print(name)
 #         print(price)
-#         print(link) 
-        name_list.append(name)
+#         print(link)
         cursor.execute("INSERT INTO page_items VALUES (%d, '%s', '%s', '%s')"%(ranks, name, price, link))
         ranks += 1
         
         cursor.execute("SELECT link FROM page_items WHERE ranks < 4")
     db_link = cursor.fetchall()
     print("현재 테이블의 데이터 수 : {}".format(len(db_link)))
-    print(db_link[0])
-    print(type(db_link[0]))
+    #print(db_link[0])
+    #print(type(db_link[0]))
     
     ranks = 0
-    cursor.execute('ALTER TABLE page_items ADD src_link CHAR(255)')
+    cursor.execute('ALTER TABLE page_items ADD (main_picture CHAR(255), src_link CHAR(255), Allergy_extraction TEXT)')
     for link in db_link:
         ranks += 1
         driver.get(''.join(link))
-#         print(":: " + ''.join(link))
         time.sleep(3)
+        main_link = driver.find_element(By.CLASS_NAME,"thumbSliderWrap").get_attribute('src')
+        
+        ### 대표 이미지 저장 ###
+        try:
+            element = WebDriverWait(driver, 30).until(
+                EC.visibility_of_element_located((By.CLASS_NAME,"thumbSlideItem"))
+            )
+        except:
+            print("error")
+        
+        main_link = driver.find_element(By.CLASS_NAME,"prodTopImgWrap").find_elements(By.TAG_NAME,'img')
+        main_picture = main_link[0].get_attribute('src')        
+        
+        ### 영양 정보 이미지 db 저장 ###
         try:
             # 영양정보 이미지 위치로 이동
             driver.execute_script("window.scrollTo(0, 3000)")
@@ -304,15 +314,19 @@ def start():
             )
         except:
             print("error")
-
+        
         base = driver.find_element(By.CLASS_NAME,"prodDetailArea").find_elements(By.TAG_NAME,'img')
-
         src_link = base[-1].get_attribute('src')
-        cursor.execute("UPDATE page_items SET src_link='%s' WHERE ranks='%d'" % (src_link, ranks))
+        
+        # 상품 메인 이미지, 영양 정보 이미지 src -> db에 저장
+        cursor.execute("UPDATE page_items SET main_picture='%s', src_link='%s' WHERE ranks='%d'" % (main_picture, src_link, ranks))
         #print(src_link)
-     
+        
         re=naver_clova(src_link) # 클로바 OCR 실행
-        stts_allergy=find_allergy(name_list,re) # 알러지 정보 추출
+        stts_allergy=find_allergy(re) # 알러지 정보 추출
+        string_allergy = ' '.join(stts_allergy)
+        cursor.execute("UPDATE page_items SET Allergy_extraction='%s' WHERE ranks='%d'" % (string_allergy, ranks))
+        #print(string_allergy)
     
     # 커밋
     conn.commit()
@@ -321,9 +335,6 @@ def start():
 
 
 start()
-
-
-
 
 
 
